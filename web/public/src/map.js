@@ -26,11 +26,12 @@ export class MapController {
       scrollWheelZoom: true,
     }).setView([35.6762, 139.6503], 11);
 
-    // Add OpenStreetMap tiles
+    // Add OpenStreetMap tiles with reduced opacity for better route visibility
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       maxZoom: 18,
       minZoom: 9,
+      opacity: 0.6,
     }).addTo(this.map);
 
     // Add scale control

@@ -125,15 +125,8 @@ function handleCandidateClick(index) {
   // Clear existing routes
   map.clearRoutes();
   
-  // Draw routes for selected candidate
+  // Draw ONLY the selected candidate's routes for focused viewing
   map.drawCandidateRoutes(candidate, true);
-  
-  // Draw faded routes for other top candidates
-  ui.state.candidates.slice(0, 5).forEach((c, i) => {
-    if (i !== index) {
-      map.drawCandidateRoutes(c, false);
-    }
-  });
   
   // Zoom to candidate
   map.zoomToStation(candidate.latitude, candidate.longitude, 13);

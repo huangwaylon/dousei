@@ -300,16 +300,70 @@ export class UIController {
   }
 
   /**
-   * Render route segments
+   * Collapse consecutive segments on the same train line
+   * @param {Array} segments - Route segments to collapse
+   * @returns {Array} Collapsed segments
+   */
+  collapseSegments(segments) {
+    if (!segments || segments.length === 0) return [];
+    
+    const collapsed = [];
+    let currentGroup = null;
+    
+    for (const segment of segments) {
+      // Transfers are always separate
+      if (segment.is_transfer) {
+        // Save current group if exists
+        if (currentGroup) {
+          collapsed.push(currentGroup);
+          currentGroup = null;
+        }
+        // Add transfer as-is
+        collapsed.push(segment);
+        continue;
+      }
+      
+      // Check if segment belongs to current group
+      if (currentGroup && currentGroup.railway_name === segment.railway_name) {
+        // Same line - extend the group
+        currentGroup.to_station_name = segment.to_station_name;
+        currentGroup.to_coordinates = segment.to_coordinates;
+        currentGroup.num_stops += segment.num_stops;
+        currentGroup.travel_time += segment.travel_time;
+      } else {
+        // Different line - save current and start new
+        if (currentGroup) {
+          collapsed.push(currentGroup);
+        }
+        currentGroup = {
+          ...segment,
+          is_collapsed: true
+        };
+      }
+    }
+    
+    // Add final group
+    if (currentGroup) {
+      collapsed.push(currentGroup);
+    }
+    
+    return collapsed;
+  }
+
+  /**
+   * Render route segments (with collapsed consecutive same-line segments)
    */
   renderRouteSegments(segments) {
     if (!segments || segments.length === 0) {
       return '<div style="color: var(--color-text-secondary);">Direct connection</div>';
     }
 
+    // Collapse consecutive segments on same line for cleaner display
+    const collapsedSegments = this.collapseSegments(segments);
+
     return `
       <div class="route-segments">
-        ${segments.map(segment => `
+        ${collapsedSegments.map(segment => `
           <div class="segment ${segment.is_transfer ? 'transfer' : ''}">
             <div class="segment-railway">
               ${segment.is_transfer ? '🔄 Transfer' : `🚆 ${segment.railway_name}`}
@@ -318,9 +372,9 @@ export class UIController {
               ${segment.from_station_name} → ${segment.to_station_name}
             </div>
             <div class="segment-info">
-              ${segment.is_transfer 
-                ? `${segment.travel_time.toFixed(1)} min transfer time` 
-                : `${segment.num_stops} stops, ${segment.travel_time.toFixed(1)} min`
+              ${segment.is_transfer
+                ? `${segment.travel_time.toFixed(1)} min transfer time`
+                : `${segment.num_stops} ${segment.num_stops === 1 ? 'stop' : 'stops'}, ${segment.travel_time.toFixed(1)} min`
               }
             </div>
           </div>
