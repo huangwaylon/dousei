@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Train Commute Optimizer - Find Your Ideal Station</title>
+    <meta name="description" content="Find the perfect living station that balances commutes for two people in Tokyo">
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
+          crossorigin=""/>
+    
+    <!-- Main CSS -->
+    <link rel="stylesheet" href="/src/styles.css">
+</head>
+<body>
+    <!-- Main Container -->
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <h1>🚂 Train Commute Optimizer</h1>
+                <p>Find the perfect station for two commuters</p>
+            </div>
+            <div class="header-actions">
+                <a href="/api/docs" target="_blank" class="btn btn-secondary">
+                    📖 API Docs
+                </a>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="app-main">
+            <!-- Search Panel -->
+            <aside class="search-panel">
+                <div class="panel-header">
+                    <h2>Work Locations</h2>
+                </div>
+                
+                <div class="panel-body">
+                    <!-- Station A -->
+                    <div class="search-group">
+                        <label for="station-a-input">
+                            <span class="station-label station-a">Person A</span>
+                            Work Station
+                        </label>
+                        <div class="search-input-wrapper">
+                            <input 
+                                type="text" 
+                                id="station-a-input" 
+                                class="search-input"
+                                placeholder="Search station (e.g., 六本木, Roppongi)"
+                                autocomplete="off"
+                            >
+                            <button id="clear-a" class="clear-btn" aria-label="Clear" style="display: none;">×</button>
+                        </div>
+                        <div id="suggestions-a" class="suggestions-dropdown"></div>
+                        <div id="selected-a" class="selected-station" style="display: none;"></div>
+                    </div>
+
+                    <!-- Station B -->
+                    <div class="search-group">
+                        <label for="station-b-input">
+                            <span class="station-label station-b">Person B</span>
+                            Work Station
+                        </label>
+                        <div class="search-input-wrapper">
+                            <input 
+                                type="text" 
+                                id="station-b-input" 
+                                class="search-input"
+                                placeholder="Search station (e.g., 海浜幕張, Makuhari)"
+                                autocomplete="off"
+                            >
+                            <button id="clear-b" class="clear-btn" aria-label="Clear" style="display: none;">×</button>
+                        </div>
+                        <div id="suggestions-b" class="suggestions-dropdown"></div>
+                        <div id="selected-b" class="selected-station" style="display: none;"></div>
+                    </div>
+
+                    <!-- Analysis Options -->
+                    <details class="options-section" open>
+                        <summary>Analysis Options</summary>
+                        <div class="option-group">
+                            <label for="top-n">
+                                Top Results: <span id="top-n-value">10</span>
+                            </label>
+                            <input 
+                                type="range" 
+                                id="top-n" 
+                                min="5" 
+                                max="20" 
+                                value="10" 
+                                step="1"
+                                class="slider"
+                            >
+                        </div>
+                        <div class="option-group">
+                            <label for="max-time">
+                                Max Commute Time: <span id="max-time-value">120</span> min
+                            </label>
+                            <input 
+                                type="range" 
+                                id="max-time" 
+                                min="30" 
+                                max="180" 
+                                value="120" 
+                                step="10"
+                                class="slider"
+                            >
+                        </div>
+                    </details>
+
+                    <!-- Analyze Button -->
+                    <button id="analyze-btn" class="btn btn-primary" disabled>
+                        <span class="btn-text">Analyze Routes</span>
+                        <span class="btn-loader" style="display: none;"></span>
+                    </button>
+
+                    <!-- Reset Button -->
+                    <button id="reset-btn" class="btn btn-secondary">
+                        Reset All
+                    </button>
+
+                    <!-- Analysis Info -->
+                    <div id="analysis-info" class="analysis-info" style="display: none;"></div>
+                </div>
+            </aside>
+
+            <!-- Map Panel -->
+            <section class="map-panel">
+                <div id="map" class="map-container"></div>
+                <div class="map-controls">
+                    <button id="fit-bounds-btn" class="map-control-btn" title="Fit all routes">
+                        🎯 Fit View
+                    </button>
+                    <button id="toggle-routes-btn" class="map-control-btn" title="Toggle routes">
+                        👁️ Toggle Routes
+                    </button>
+                </div>
+                <div id="map-legend" class="map-legend" style="display: none;">
+                    <div class="legend-item">
+                        <span class="legend-marker marker-a">📍</span>
+                        <span>Person A Work</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-marker marker-b">📍</span>
+                        <span>Person B Work</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-marker marker-candidate">🏠</span>
+                        <span>Candidate Station</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Results Panel -->
+            <aside class="results-panel">
+                <div class="panel-header">
+                    <h2>Results</h2>
+                    <div class="results-actions" id="results-actions" style="display: none;">
+                        <button id="export-json-btn" class="icon-btn" title="Export as JSON">
+                            💾 JSON
+                        </button>
+                        <button id="export-csv-btn" class="icon-btn" title="Export as CSV">
+                            📊 CSV
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="panel-body">
+                    <!-- Empty State -->
+                    <div id="results-empty" class="empty-state">
+                        <div class="empty-icon">🔍</div>
+                        <h3>No Analysis Yet</h3>
+                        <p>Select two work stations and click "Analyze Routes" to find optimal living locations.</p>
+                    </div>
+
+                    <!-- Results List -->
+                    <div id="results-list" class="results-list" style="display: none;"></div>
+                </div>
+            </aside>
+        </main>
+    </div>
+
+    <!-- Route Details Modal -->
+    <div id="route-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-title">Route Details</h2>
+                <button id="modal-close" class="modal-close" aria-label="Close">×</button>
+            </div>
+            <div id="modal-body" class="modal-body"></div>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" 
+            crossorigin=""></script>
+    
+    <!-- Main App -->
+    <script type="module" src="/src/main.js"></script>
+</body>
+</html>
