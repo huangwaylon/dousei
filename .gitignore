@@ -1,0 +1,18 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Generated files
+train_data_analysis.json
+comprehensive_analysis.json
+
+# Database files
+train_data.db
+train_data.db-journal
